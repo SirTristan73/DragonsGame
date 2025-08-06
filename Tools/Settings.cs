@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using UnityEngine.Audio;
+using System.Linq;
 
 public class Settings : PersistentSingleton<Settings>
 {
@@ -14,7 +15,7 @@ public class Settings : PersistentSingleton<Settings>
 
     public Dropdown _resDropdown;
     private List<Resolution> _avalibleRes;
-    private List<string> _resOptions = new List<string>();
+    private List<string> _resOptions;
 
     public AudioMixer _mainMixer;
 
@@ -116,12 +117,21 @@ public class Settings : PersistentSingleton<Settings>
 
     public void PopulateResolutionsDropdown()
     {
-        _avalibleRes = new List<Resolution>(Screen.resolutions);
+        _resDropdown.ClearOptions();
 
-        _resOptions.Clear();
+        _avalibleRes = Screen.resolutions.ToList();
+
+        // _avalibleRes = _avalibleRes
+        //         .GroupBy(res => new { res.width, res.height })
+        //         .Select(group => group.OrderByDescending(res => res.refreshRateRatio.numerator / (double)res.refreshRateRatio.denominator).First())
+        //         .OrderBy(res => res.width)
+        //         .ThenBy(res => res.height)
+        //         .ToList();
+        
+        _resOptions = new List<string>();
 
         int currentResolutionIndex = 0;
-
+        
         for (int i = 0; i < _avalibleRes.Count; i++)
         {
             Resolution res = _avalibleRes[i];

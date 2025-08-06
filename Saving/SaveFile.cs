@@ -6,6 +6,7 @@ public class SaveFile
 {
     public int _enemyKilled;
     public float _timePlayed;
+    public int _currentPlayerModel;
 
     public GameSettings GameSettings = new GameSettings();
 
@@ -14,6 +15,7 @@ public class SaveFile
     {
         _enemyKilled = 0;
         _timePlayed = 0;
+        _currentPlayerModel = 0;
 
     }
 }

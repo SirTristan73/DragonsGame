@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class EnemyBehavior : MonoBehaviour, DamageInterface
+public class BossBehavior : MonoBehaviour, DamageInterface
 {
 
     private float _enemySpeed;
@@ -46,14 +46,14 @@ public class EnemyBehavior : MonoBehaviour, DamageInterface
             if (_enemyHP <= 0)
             {
                 _isDead = true;
-                EnemyController.SharedInstance.EnemyKilled();
+                EnemyController.SharedInstance.BossKilled();
                 Destroy(this.gameObject);
             }
         }
     }
 
 
-    public void SetEnemyStats(float health, float speed)
+    public void SetBossStats(float health, float speed)
     {
         _enemyHP = health;
         _enemySpeed = speed;
@@ -69,5 +69,4 @@ public class EnemyBehavior : MonoBehaviour, DamageInterface
             killObj.TakeDamage(DamageSource.Enemy);
         }
     }
-
 }

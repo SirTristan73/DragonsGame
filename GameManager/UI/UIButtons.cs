@@ -48,8 +48,16 @@ public class UIButtons : PersistentSingleton<UIButtons>
     public Toggle _fullscreenToggle;
 
 
+    [Header("ChoiseMenuButtons")]
+    public Button _previousChoise;
+    public Button _nextChoise;
+    public TMP_Text _statsHPText;
+    public TMP_Text _statsSpeedText;
+    public TMP_Text _statsUpgradeText;
+
+    //Animation variables
     private const string _click = "Click";
-    public float _animationDelay = 3f;
+    private float _animationDelay = 1.2f;
 
 
 
@@ -116,6 +124,11 @@ public class UIButtons : PersistentSingleton<UIButtons>
         _mainMenu.SetActive(false);
         _playMode.SetActive(true);
 
+        if (_lostScreen.activeInHierarchy)
+        {
+            _lostScreen.SetActive(false);
+        }
+
     }
 
 
@@ -156,7 +169,7 @@ public class UIButtons : PersistentSingleton<UIButtons>
 
         _mainMenu.SetActive(true);
 
-
+        Cursor.visible = true;
         EventSystemCatch(_mainMenuPrimary.gameObject);
 
 
@@ -165,7 +178,7 @@ public class UIButtons : PersistentSingleton<UIButtons>
 
     public void SettingsMenu()
     {
-
+        Cursor.visible = true;
         _mainMenu.SetActive(false);
         _settingsMenu.SetActive(true);
         EventSystemCatch(_settingsPrimary.gameObject);
@@ -173,8 +186,6 @@ public class UIButtons : PersistentSingleton<UIButtons>
         Settings.Instance.OnSettingsChanged.AddListener(UpdateUIFromSettings);
 
     }
-
-
 
 
     public void UpdateUIFromSettings()
@@ -186,14 +197,14 @@ public class UIButtons : PersistentSingleton<UIButtons>
             _fullscreenToggle.onValueChanged.AddListener(Settings.Instance.SetFullscreen);
         }
 
-
-
     }
+
 
     public void UIPauseMenu()
     {
         _playMode.SetActive(true);
         _pauseMenu.SetActive(true);
+        Cursor.visible = true;
         EventSystemCatch(_pauseMenuPrimary.gameObject);
     }
 
@@ -203,22 +214,16 @@ public class UIButtons : PersistentSingleton<UIButtons>
         _mainMenu.SetActive(false);
         _choiceMenu.SetActive(true);
 
+        Cursor.visible = true;
         EventSystemCatch(_choicePrimary.gameObject);
 
-    }
-
-
-    public void ChoiceSet(int numChsn)
-    {
-        PlayerChoise.Instance._currentChoise = numChsn;
-        PlayerChoise.Instance.ChooseAction();
     }
 
 
     public void LostGameScreen()
     {
         _lostScreen.SetActive(true);
-
+        Cursor.visible = true;
         EventSystemCatch(_lostPrimary.gameObject);
     }
 
@@ -229,9 +234,57 @@ public class UIButtons : PersistentSingleton<UIButtons>
 
     }
 
+
     public void ExitGame()
     {
         GameManager.Instance.ChangeGameState(GameState.Quit);
+    }
+
+
+    public void RestartButton()
+    {
+        StartButton();
+        GameManager.Instance.ChangeGameState(GameState.Playing);
+    }
+
+
+    public void NextButtonChoise()
+    {
+        PlayerChoise.Instance.NextSkin();
+        SetButtonsInChoice();
+    }
+
+
+    public void PreviousButtonChoise()
+    {
+        PlayerChoise.Instance.PreviousSkin();
+        SetButtonsInChoice();
+
+    }
+
+
+    public void SetButtonsInChoice()
+    {
+        _previousChoise.interactable = PlayerChoise.Instance._previousAvalible;
+        _nextChoise.interactable = PlayerChoise.Instance._nextAvalible;
+
+        ModelOutOf();
+    }
+
+
+    public void StatsText(float hp, float speed)
+    {
+        _statsHPText.text = "Health: " + hp.ToString();
+        _statsSpeedText.text = "Speed: " + (speed / PlayerChoise.Instance._avalibleSkins[0].BaseStats._speed).ToString("F1");
+    }
+
+
+    public void ModelOutOf()
+    {
+        _statsUpgradeText.text =
+        (PlayerChoise.Instance._currentChoise + 1).ToString()
+        + " / "
+        + (PlayerChoise.Instance._avalibleSkins.Count).ToString();
     }
 
 }

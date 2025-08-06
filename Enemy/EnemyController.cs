@@ -11,26 +11,34 @@ public class EnemyController : MonoBehaviour
 {
     public static EnemyController SharedInstance;
 
+    [Header("Common enemies")]
     public List<CreatureStats> _enemyPref;
+    private List<CreatureStats> _enemiesToSpawn;
 
     Vector3 _spawnerPosition;
 
     private Coroutine _spawnCoroutine;
 
-    private float _xSpawnClamp = 6f;
+    private float _xSpawnClamp = 5.7f;
     private float _zSpawnClamp = 1f;
 
 
-    // Enemies in list
-    private int _defaultEnemy = 0;
-    private int _2ndlvl = 1;
-    private int _3rdlvl = 3;
+
+    [Header("Bosses")]
+    public List<CreatureStats> _bossesPref;
 
     // Wave types
-    public int _waveType;
+    public int _waveType = 1;
 
     // KillCount
     public int _enemiesKilled = 0;
+
+    public int _wavePoints = 15;
+
+    private int _enemiesLeft = 0;
+
+    private float _defaultDelay = 1f;
+
 
 
 
@@ -39,80 +47,143 @@ public class EnemyController : MonoBehaviour
         SharedInstance = this;
     }
 
+
+    private void OnEnable()
+    {
+        //TODO
+        _enemiesKilled = 0;
+        _waveType = 1;
+        _enemiesLeft = 0;
+    }
+
+
     void Start()
     {
         _spawnerPosition = this.transform.position;
-        StartSpawnSequence(15, _defaultEnemy, 1f);
+        CalculateNextEnemySpawn();
 
     }
 
-    public void StartSpawnSequence(int count, int type, float spawnDelay)
+
+    public void CalculateNextEnemySpawn()
+    {
+        int minPointsNext = _wavePoints / (_waveType == 0 ? 1 : _waveType);
+        int maxPointsNext = _wavePoints * 2;
+        int pointsForNextWave = Random.Range(minPointsNext, maxPointsNext);
+
+        _enemiesToSpawn = WaveIncludes(pointsForNextWave);
+
+        StartSpawnSequence(_enemiesToSpawn);
+
+    }
+
+
+    public void StartSpawnSequence(List<CreatureStats> spawnOrder)
     {
         if (_spawnCoroutine != null)
         {
             StopCoroutine(_spawnCoroutine);
         }
-        _spawnCoroutine = StartCoroutine(EnemySpawn(count, type, spawnDelay));
-    }
 
-    private IEnumerator DelayedSpawnSequence(float initialDelay, int count, int type, float spawnDelay)
-    {
-        yield return new WaitForSeconds(initialDelay);
-        StartSpawnSequence(count, type, spawnDelay);
+        _spawnCoroutine = StartCoroutine(EnemySpawn(spawnOrder));
     }
 
 
-
-    private IEnumerator EnemySpawn(int count, int type, float delay)
+    private IEnumerator EnemySpawn(List<CreatureStats> spawningEnemies)
     {
-        GameObject enemy = _enemyPref[type]._model;
+        _enemiesLeft = 0;
 
-        int waveType = type;
-
-        float health = _enemyPref[type].BaseStats._health;
-        float speed = _enemyPref[type].BaseStats._speed;
-
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < spawningEnemies.Count; i++)
         {
+            GameObject enemy = spawningEnemies[i]._model;
+
+            float health = spawningEnemies[i].BaseStats._health;
+            float speed = spawningEnemies[i].BaseStats._speed;
 
             float posToSpawnX = Random.Range(-_xSpawnClamp, _xSpawnClamp) + _spawnerPosition.x;
             float posToSpawnZ = Random.Range(-_zSpawnClamp, _zSpawnClamp) + _spawnerPosition.z;
 
             Vector3 spawnPos = new Vector3(posToSpawnX, _spawnerPosition.y, posToSpawnZ);
 
-
-
             GameObject enemyInstance = Instantiate(enemy, spawnPos, Quaternion.identity);
 
             var enemyStats = enemyInstance.GetComponent<EnemyBehavior>();
 
+            _enemiesLeft++;
+
             enemyStats.SetEnemyStats(health, speed);
 
-            yield return new WaitForSeconds(delay);
-
+            yield return new WaitForSeconds(_defaultDelay);
         }
 
         _spawnCoroutine = null;
 
-        waveType++;
+    }
 
-        if (waveType >= 2)
+
+    private List<CreatureStats> WaveIncludes(int budget)
+    {
+        List<CreatureStats> waveIncludes = new List<CreatureStats>();
+        int currentBudget = budget;
+
+        while (currentBudget > 0)
         {
-            waveType = 0;
+            List<CreatureStats> affordableEnemies = _enemyPref
+            .Where(enemy => enemy.BaseStats._points <= currentBudget)
+            .ToList();
+            if (affordableEnemies.Count == 0)
+            {
+                break;
+            }
+            CreatureStats chosenEnemy = affordableEnemies[Random.Range(0, affordableEnemies.Count)];
+            waveIncludes.Add(chosenEnemy);
+            currentBudget -= chosenEnemy.BaseStats._points;
         }
-
-        StartCoroutine(DelayedSpawnSequence(1f, 3, waveType, 1f));
-
+        return waveIncludes;
     }
 
 
     public void EnemyKilled()
     {
+        _enemiesLeft--;
         _enemiesKilled++;
+
+        if (_enemiesLeft == 0)
+        {
+            NoEnemiesLeft();
+        }
     }
 
-    
-    
- 
+
+    public void NoEnemiesLeft()
+    {
+        SpawnBoss();
+    }
+
+
+    public void SpawnBoss()
+    {
+        int bossToSpawn = Random.Range(0, _bossesPref.Count);
+
+        GameObject bossSpawned = _bossesPref[bossToSpawn]._model;
+
+        float bossHP = _bossesPref[bossToSpawn].BaseStats._health;
+        float bossSpeed = _bossesPref[bossToSpawn].BaseStats._speed;
+
+        GameObject bossInstance = Instantiate(bossSpawned, this.transform.position, Quaternion.identity);
+
+        var bossStats = bossInstance.GetComponent<BossBehavior>();
+
+
+        bossStats.SetBossStats(bossHP, bossSpeed);
+        
+    }
+
+
+    public void BossKilled()
+    {
+        _waveType++;
+        CalculateNextEnemySpawn();
+    }
     
 }

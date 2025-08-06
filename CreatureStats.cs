@@ -19,6 +19,7 @@ public struct Stats
 {
     public float _health;
     public float _speed;
+    public int _points;
 }
 
 [Serializable]
@@ -26,6 +27,7 @@ public enum CreatureType
 {
     Player = 0,
     Enemy = 1,
+    Boss = 2,
 }
 
 [Serializable]

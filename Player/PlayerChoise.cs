@@ -6,33 +6,51 @@ public class PlayerChoise : PersistentSingleton<PlayerChoise>
 {
     public List<CreatureStats> _avalibleSkins;
 
-    public int _currentChoise = 0;
+    public int _currentChoise;
 
-    public MenuModel _modelInMenu;
+    public bool _nextAvalible;
+    public bool _previousAvalible;
+
+
+    protected override void Awake()
+    {
+        base.Awake();
+        CheckSkinAvalible();
+    }
+
 
     public void ChooseAction()
     {
-
-        Debug.Log(_currentChoise);
-        _modelInMenu.SwitchTargetModel();
-        // PlayerController.Instance.SetPlayerModel(_avalibleSkins[_currentChoise]);
-
+        MenuModel.Instance.SwitchTargetModel();
     }
 
 
-    public void FirstUpgrade()
+    public void NextSkin()
     {
-        _currentChoise = 1;
+        _currentChoise++;
+
+        CheckSkinAvalible();
+
         ChooseAction();
-        WeaponContoller.SharedInstance.ProjectileSwitching(1);
     }
 
 
-    public void DefaultUpgrade()
+    public void PreviousSkin()
     {
-        _currentChoise = 0;
-        ChooseAction();
-        WeaponContoller.SharedInstance.ProjectileSwitching(0);
+        _currentChoise--;
 
+        CheckSkinAvalible();
+
+        ChooseAction();
     }
+
+
+    public void CheckSkinAvalible()
+    {
+        _previousAvalible = (_currentChoise > 0);
+
+        _nextAvalible = (_currentChoise < _avalibleSkins.Count - 1);
+    }
+
+
 }

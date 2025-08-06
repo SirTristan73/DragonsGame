@@ -57,7 +57,6 @@ public class GameManager : PersistentSingleton<GameManager>
     }
 
 
-
     private void MainMenuScene()
     {
         Time.timeScale = 1;
@@ -66,7 +65,7 @@ public class GameManager : PersistentSingleton<GameManager>
 
         TimeManager.Instance.UnregisterAllListeners();
 
-        LoadGameData();       
+        LoadGameData();
 
     }
 
@@ -80,7 +79,7 @@ public class GameManager : PersistentSingleton<GameManager>
     private void GameIsPaused()
     {
         Time.timeScale = 0;
-        
+
         UIButtons.Instance.UIPauseMenu();
     }
 
@@ -88,7 +87,7 @@ public class GameManager : PersistentSingleton<GameManager>
     private void GameIsPlaying()
     {
         Time.timeScale = 1;
-
+        Cursor.visible = false;
         UIButtons.Instance.UIinPlaymode();
     }
 
@@ -126,7 +125,13 @@ public class GameManager : PersistentSingleton<GameManager>
         SaveFile data = SaveManager.Instance.LoadGame();
 
         data._timePlayed += UIButtons.Instance._playerTimer;
-        data._enemyKilled += EnemyController.SharedInstance._enemiesKilled;
+        
+        if (EnemyController.SharedInstance != null)
+        {
+            data._enemyKilled += EnemyController.SharedInstance._enemiesKilled;
+        }
+
+        data._currentPlayerModel = PlayerChoise.Instance._currentChoise;
 
         SaveManager.Instance.SaveGame(data);
 
@@ -137,8 +142,10 @@ public class GameManager : PersistentSingleton<GameManager>
     {
         SaveFile loadedData = SaveManager.Instance.LoadGame();
         UIButtons.Instance._killCounter.text = "Total kills: " + loadedData._enemyKilled.ToString("F1");
-        UIButtons.Instance._timeCounter.text = "Total time: " + loadedData._timePlayed.ToString("F1");   
+        UIButtons.Instance._timeCounter.text = "Total time: " + loadedData._timePlayed.ToString("F1");
+        PlayerChoise.Instance._currentChoise = loadedData._currentPlayerModel;
     }
+    
 }
 
 
