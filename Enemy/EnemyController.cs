@@ -33,6 +33,7 @@ public class EnemyController : MonoBehaviour
     // KillCount
     public int _enemiesKilled = 0;
 
+    // TODO
     public int _wavePoints = 15;
 
     private int _enemiesLeft = 0;
@@ -54,6 +55,7 @@ public class EnemyController : MonoBehaviour
         _enemiesKilled = 0;
         _waveType = 1;
         _enemiesLeft = 0;
+        _wavePoints = 15;
     }
 
 
@@ -182,6 +184,8 @@ public class EnemyController : MonoBehaviour
 
     public void BossKilled()
     {
+        _wavePoints += _waveType;
+        Economics.Instance.AddCoinsProcess(_waveType);
         _waveType++;
         CalculateNextEnemySpawn();
     }

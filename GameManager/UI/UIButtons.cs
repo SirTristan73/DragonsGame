@@ -24,10 +24,16 @@ public class UIButtons : PersistentSingleton<UIButtons>
     public float _playerTimer = 0;
 
 
-    // Статтрекер в меин меню
+    [Header("Stattrackers")]
     public TMP_Text _killCounter;
     public TMP_Text _timeCounter;
+    public TMP_Text _mainCurrencyTracker;
     public float _totalTIme;
+
+
+    [Header("Upgrade")]
+    public Button _upgradePlayerButton;
+    public TMP_Text _upgradeMeter;
 
 
     [Header("EventSystemCatch")]
@@ -161,7 +167,6 @@ public class UIButtons : PersistentSingleton<UIButtons>
             _settingsMenu.SetActive(false);
         }
 
-
         if (_lostScreen.activeInHierarchy)
         {
             _lostScreen.SetActive(false);
@@ -169,9 +174,10 @@ public class UIButtons : PersistentSingleton<UIButtons>
 
         _mainMenu.SetActive(true);
 
+        IsUpgradeAvalible();
+
         Cursor.visible = true;
         EventSystemCatch(_mainMenuPrimary.gameObject);
-
 
     }
 
@@ -213,7 +219,8 @@ public class UIButtons : PersistentSingleton<UIButtons>
     {
         _mainMenu.SetActive(false);
         _choiceMenu.SetActive(true);
-
+        PlayerChoise.Instance.CheckSkinAvalible();
+        SetButtonsInChoice();
         Cursor.visible = true;
         EventSystemCatch(_choicePrimary.gameObject);
 
@@ -231,7 +238,6 @@ public class UIButtons : PersistentSingleton<UIButtons>
     public void EventSystemCatch(GameObject button)
     {
         EventSystem.current.SetSelectedGameObject(button);
-
     }
 
 
@@ -259,7 +265,6 @@ public class UIButtons : PersistentSingleton<UIButtons>
     {
         PlayerChoise.Instance.PreviousSkin();
         SetButtonsInChoice();
-
     }
 
 
@@ -275,7 +280,8 @@ public class UIButtons : PersistentSingleton<UIButtons>
     public void StatsText(float hp, float speed)
     {
         _statsHPText.text = "Health: " + hp.ToString();
-        _statsSpeedText.text = "Speed: " + (speed / PlayerChoise.Instance._avalibleSkins[0].BaseStats._speed).ToString("F1");
+        _statsSpeedText.text = "Speed: " + ((speed / PlayerChoise.Instance._avalibleSkins[0].BaseStats._speed)*100).ToString("F0");
+        
     }
 
 
@@ -285,6 +291,44 @@ public class UIButtons : PersistentSingleton<UIButtons>
         (PlayerChoise.Instance._currentChoise + 1).ToString()
         + " / "
         + (PlayerChoise.Instance._avalibleSkins.Count).ToString();
+    }
+
+
+    public void CurrencyTrackers()
+    {
+        _mainCurrencyTracker.text = "Coins: " + Economics.Instance._coins;
+    }
+
+
+    public void UpgradePlayerButton()
+    {
+        Economics.Instance.PayingProcess();
+        IsUpgradeAvalible();
+    }
+
+
+    public void IsUpgradeAvalible()
+    {
+        if (Economics.Instance.CheckIfNextUpgradeAvalible())
+        {
+            _upgradePlayerButton.interactable = true;
+            _upgradeMeter.text = "Unlock new character";
+        }
+
+        else if (Economics.Instance.PlayerUpgradePrice() == 0)
+        {
+            _upgradePlayerButton.interactable = false;
+            _upgradeMeter.text = "Unlocked all characters";
+        }
+
+        else if (!Economics.Instance.CheckIfNextUpgradeAvalible())
+        {
+            _upgradePlayerButton.interactable = false;
+            _upgradeMeter.text = Economics.Instance._coins.ToString() + " / " + Economics.Instance.PlayerUpgradePrice().ToString();
+        }
+
+        CurrencyTrackers();
+        
     }
 
 }

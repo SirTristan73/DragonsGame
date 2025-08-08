@@ -11,6 +11,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
     {
         base.Awake();
         _savePath = Path.Combine(Application.persistentDataPath, "game_save.json");
+        Debug.Log(_savePath);
     }
 
 

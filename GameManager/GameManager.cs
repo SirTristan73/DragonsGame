@@ -9,6 +9,7 @@ public class GameManager : PersistentSingleton<GameManager>
     public static event Action<GameState> OnPrepareStateChange;
     public static event Action<GameState> OnChangeGameState;
 
+
     public GameState State { get; private set; }
 
     void Start() => ChangeGameState(GameState.SystemsLoaded);
@@ -59,13 +60,14 @@ public class GameManager : PersistentSingleton<GameManager>
 
     private void MainMenuScene()
     {
+        LoadGameData();
+        
         Time.timeScale = 1;
 
         UIButtons.Instance.UIinMainMenu();
 
         TimeManager.Instance.UnregisterAllListeners();
 
-        LoadGameData();
 
     }
 
@@ -125,12 +127,15 @@ public class GameManager : PersistentSingleton<GameManager>
         SaveFile data = SaveManager.Instance.LoadGame();
 
         data._timePlayed += UIButtons.Instance._playerTimer;
-        
+
         if (EnemyController.SharedInstance != null)
         {
             data._enemyKilled += EnemyController.SharedInstance._enemiesKilled;
         }
-
+  
+        data._currentMainCurrency = Economics.Instance._coins;
+        data._currentModelProgress = Economics.Instance._currentPlayerUpgrade;
+        
         data._currentPlayerModel = PlayerChoise.Instance._currentChoise;
 
         SaveManager.Instance.SaveGame(data);
@@ -141,8 +146,13 @@ public class GameManager : PersistentSingleton<GameManager>
     public void LoadGameData()
     {
         SaveFile loadedData = SaveManager.Instance.LoadGame();
+
+        Economics.Instance._currentPlayerUpgrade = loadedData._currentModelProgress;
+        Economics.Instance._coins = loadedData._currentMainCurrency;
+
         UIButtons.Instance._killCounter.text = "Total kills: " + loadedData._enemyKilled.ToString("F1");
         UIButtons.Instance._timeCounter.text = "Total time: " + loadedData._timePlayed.ToString("F1");
+
         PlayerChoise.Instance._currentChoise = loadedData._currentPlayerModel;
     }
     
@@ -160,3 +170,5 @@ public class GameManager : PersistentSingleton<GameManager>
         Lost = 5,
         Quit = 9,
     }
+
+    

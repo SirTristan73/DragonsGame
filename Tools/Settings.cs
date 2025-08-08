@@ -13,6 +13,8 @@ public class Settings : PersistentSingleton<Settings>
 
     public GameSettings CurrentSettings { get; private set; }
 
+    public Toggle _isFullscreen;
+
     public Dropdown _resDropdown;
     private List<Resolution> _avalibleRes;
     private List<string> _resOptions;
@@ -33,22 +35,36 @@ public class Settings : PersistentSingleton<Settings>
 
         PopulateResolutionsDropdown();
 
-        OnSettingsLoaded.AddListener(SetCurrentResolutionInDropdown);
+        SetResolutionInDropdownToSaved();
 
+
+
+        ApplyAllSetting();
     }
 
 
     public void LoadSettingsFromSaveFile()
     {
         SaveFile loadedSaveFile = SaveManager.Instance.LoadGame();
+
         CurrentSettings = loadedSaveFile.GameSettings;
+
         if (_masterVolumeSL != null)
         {
             _masterVolumeSL.onValueChanged.AddListener(SetMasterVolume);
             _masterVolumeSL.value = CurrentSettings._masterVolume;
         }
 
-        ApplyAllSetting();
+        if (_resDropdown != null)
+        {
+            _resDropdown.onValueChanged.AddListener(SetResolution);
+        }
+
+        if (_isFullscreen != null)
+        {
+            _isFullscreen.onValueChanged.AddListener(SetFullscreen);
+            _isFullscreen.isOn = CurrentSettings._fullscreenIS;
+        }
 
     }
 
@@ -67,6 +83,7 @@ public class Settings : PersistentSingleton<Settings>
         }
 
         float volumeToSet = CurrentSettings._masterVolume;
+
         if (volumeToSet < 0.0001f)
         {
             volumeToSet = 0.0001f;
@@ -74,8 +91,9 @@ public class Settings : PersistentSingleton<Settings>
 
         _mainMixer.SetFloat(_MasterVolumePar, Mathf.Log10(volumeToSet) * 20);
 
-        OnSettingsLoaded.Invoke();
+        OnSettingsChanged.Invoke();
 
+        
     }
 
 
@@ -96,21 +114,23 @@ public class Settings : PersistentSingleton<Settings>
     }
 
 
-    public void SetResolution(int res)
+    public void SetFullscreen(bool fullscreen)
     {
-        CurrentSettings._resolutionIND = res;
+        CurrentSettings._fullscreenIS = fullscreen;
+        
         ApplyAllSetting();
         OnSettingsChanged.Invoke();
+        Debug.Log(fullscreen);
         SaveCurrentSettings();
     }
 
 
-    public void SetFullscreen(bool fullscreen)
+    public void SetResolution(int res)
     {
-        CurrentSettings._fullscreenIS = fullscreen;
+        CurrentSettings._resolutionIND = res;
+        Debug.Log(Screen.currentResolution);
         ApplyAllSetting();
         OnSettingsChanged.Invoke();
-        Debug.Log(fullscreen);
         SaveCurrentSettings();
     }
 
@@ -121,13 +141,6 @@ public class Settings : PersistentSingleton<Settings>
 
         _avalibleRes = Screen.resolutions.ToList();
 
-        // _avalibleRes = _avalibleRes
-        //         .GroupBy(res => new { res.width, res.height })
-        //         .Select(group => group.OrderByDescending(res => res.refreshRateRatio.numerator / (double)res.refreshRateRatio.denominator).First())
-        //         .OrderBy(res => res.width)
-        //         .ThenBy(res => res.height)
-        //         .ToList();
-        
         _resOptions = new List<string>();
 
         int currentResolutionIndex = 0;
@@ -135,16 +148,10 @@ public class Settings : PersistentSingleton<Settings>
         for (int i = 0; i < _avalibleRes.Count; i++)
         {
             Resolution res = _avalibleRes[i];
-            string option = $"{res.width}x{res.height}";
+            string option = $"{res.width}x{res.height} ({(res.refreshRateRatio.numerator / (double)res.refreshRateRatio.denominator).ToString("F0")}Hz)";
             _resOptions.Add(option);
-
-            if (res.width == Screen.currentResolution.width &&
-                res.height == Screen.currentResolution.height)
-            {
-                currentResolutionIndex = i;
-            }
         }
-
+        
         _resDropdown.AddOptions(_resOptions);
         _resDropdown.value = currentResolutionIndex;
         _resDropdown.RefreshShownValue();      
@@ -152,29 +159,32 @@ public class Settings : PersistentSingleton<Settings>
     }
 
 
-    public void SetCurrentResolutionInDropdown()
+    public void SetResolutionInDropdownToSaved()
     {
         int savedInd = CurrentSettings._resolutionIND;
+
         if (savedInd >= 0 && savedInd < _resOptions.Count)
         {
-            _resDropdown.onValueChanged.RemoveListener(SetResolution);
             _resDropdown.value = savedInd;
-            _resDropdown.onValueChanged.AddListener(SetResolution);
         }
 
         else
         {
             int actualCurrentInd = 0;
+
             for (int i = 0; i < _avalibleRes.Count; i++)
             {
                 Resolution res = _avalibleRes[i];
+
                 if (res.width == Screen.currentResolution.width &&
-                    res.height == Screen.currentResolution.height)
+                    res.height == Screen.currentResolution.height &&
+                    res.refreshRateRatio.Equals(Screen.currentResolution.refreshRateRatio))
                 {
                     actualCurrentInd = i;
                     break;
                 }
             }
+
             _resDropdown.value = actualCurrentInd;
             SetResolution(actualCurrentInd);
         }

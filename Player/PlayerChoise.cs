@@ -12,11 +12,6 @@ public class PlayerChoise : PersistentSingleton<PlayerChoise>
     public bool _previousAvalible;
 
 
-    protected override void Awake()
-    {
-        base.Awake();
-        CheckSkinAvalible();
-    }
 
 
     public void ChooseAction()
@@ -47,9 +42,11 @@ public class PlayerChoise : PersistentSingleton<PlayerChoise>
 
     public void CheckSkinAvalible()
     {
-        _previousAvalible = (_currentChoise > 0);
+        _previousAvalible = _currentChoise > 0;
+        Debug.Log("<<<"+_previousAvalible);
 
-        _nextAvalible = (_currentChoise < _avalibleSkins.Count - 1);
+        _nextAvalible = (_currentChoise < _avalibleSkins.Count - 1 && _currentChoise < Economics.Instance._currentPlayerUpgrade);
+        Debug.Log(">>>"+_nextAvalible);
     }
 
 
