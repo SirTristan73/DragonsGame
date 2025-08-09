@@ -185,9 +185,12 @@ public class UIButtons : PersistentSingleton<UIButtons>
     public void SettingsMenu()
     {
         Cursor.visible = true;
+
         _mainMenu.SetActive(false);
         _settingsMenu.SetActive(true);
+
         EventSystemCatch(_settingsPrimary.gameObject);
+
         Settings.Instance.OnSettingsLoaded.AddListener(UpdateUIFromSettings);
         Settings.Instance.OnSettingsChanged.AddListener(UpdateUIFromSettings);
 

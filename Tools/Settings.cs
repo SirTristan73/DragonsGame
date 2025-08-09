@@ -5,6 +5,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using UnityEngine.Audio;
 using System.Linq;
+using UnityEditor;
 
 public class Settings : PersistentSingleton<Settings>
 {
@@ -13,12 +14,33 @@ public class Settings : PersistentSingleton<Settings>
 
     public GameSettings CurrentSettings { get; private set; }
 
+
+    [Header("Fullsceen")]
     public Toggle _isFullscreen;
+    private FullScreenMode _selectedFullSceenMode;
 
+
+    [Header("Resolution")]
     public Dropdown _resDropdown;
-    private List<Resolution> _avalibleRes;
-    private List<string> _resOptions;
+    public Dropdown _refreshRateDropdown;
 
+
+    private List<string> _resOptions = new();
+    private List<string> _refreshRateOptions = new();
+
+
+    //Vitaliy test
+    private readonly List<Vector2Int> _avalibleResolutions = new();
+    private readonly List<RefreshRate> _avalibleRefreshRates = new();
+
+    public Vector2Int _currentResolution;
+    private RefreshRate _currentRefreshRate;
+
+    private Vector2Int _selectedResolution;
+    private RefreshRate _selectedRefreshRate;
+
+
+    [Header("Volume")]
     public AudioMixer _mainMixer;
 
     private const string _MasterVolumePar = "Master";
@@ -31,13 +53,15 @@ public class Settings : PersistentSingleton<Settings>
     {
         base.Awake();
 
+        InitResolutionsAndRefreshRates();
+
         LoadSettingsFromSaveFile();
 
         PopulateResolutionsDropdown();
+        PopulateRefreshRatesDropdown();
 
-        SetResolutionInDropdownToSaved();
-
-
+        SetRefreshRateDropdownValueToSaved();
+        SetResolutionDropdownValueToSaved();
 
         ApplyAllSetting();
     }
@@ -57,7 +81,7 @@ public class Settings : PersistentSingleton<Settings>
 
         if (_resDropdown != null)
         {
-            _resDropdown.onValueChanged.AddListener(SetResolution);
+            _resDropdown.onValueChanged.AddListener(SetResolutionFromDropdown);
         }
 
         if (_isFullscreen != null)
@@ -66,6 +90,21 @@ public class Settings : PersistentSingleton<Settings>
             _isFullscreen.isOn = CurrentSettings._fullscreenIS;
         }
 
+        if (_refreshRateDropdown != null)
+        {
+            _refreshRateDropdown.onValueChanged.AddListener(SetRefreshRateFromDropdown);
+        }
+
+        if (CurrentSettings._resolutionIND >= 0 && CurrentSettings._resolutionIND < _avalibleResolutions.Count)
+        {
+            _selectedResolution = _avalibleResolutions[CurrentSettings._resolutionIND];
+        }
+
+        if (CurrentSettings._refreshRateIND >= 0 && CurrentSettings._refreshRateIND < _avalibleRefreshRates.Count)
+        {
+            _selectedRefreshRate = _avalibleRefreshRates[CurrentSettings._refreshRateIND];
+        }
+        
     }
 
 
@@ -76,11 +115,7 @@ public class Settings : PersistentSingleton<Settings>
             return;
         }
 
-        if (CurrentSettings._resolutionIND >= 0 && CurrentSettings._resolutionIND < Screen.resolutions.Length)
-        {
-            Resolution selectedResolution = Screen.resolutions[CurrentSettings._resolutionIND];
-            Screen.SetResolution(selectedResolution.width, selectedResolution.height, CurrentSettings._fullscreenIS);
-        }
+        ApplyResolutionSettings();
 
         float volumeToSet = CurrentSettings._masterVolume;
 
@@ -93,7 +128,6 @@ public class Settings : PersistentSingleton<Settings>
 
         OnSettingsChanged.Invoke();
 
-        
     }
 
 
@@ -108,27 +142,52 @@ public class Settings : PersistentSingleton<Settings>
     public void SetMasterVolume(float volume)
     {
         CurrentSettings._masterVolume = volume;
+
         ApplyAllSetting();
+
         OnSettingsChanged.Invoke();
+
         SaveCurrentSettings();
     }
 
 
     public void SetFullscreen(bool fullscreen)
     {
+        if (fullscreen)
+        {
+            _selectedFullSceenMode = FullScreenMode.FullScreenWindow;
+        }
+        else
+        {
+            _selectedFullSceenMode = FullScreenMode.Windowed;
+        }
+
+        Screen.fullScreenMode = _selectedFullSceenMode;
+
         CurrentSettings._fullscreenIS = fullscreen;
-        
+
         ApplyAllSetting();
+
         OnSettingsChanged.Invoke();
-        Debug.Log(fullscreen);
+
         SaveCurrentSettings();
     }
 
 
-    public void SetResolution(int res)
+    public void SetResolutionFromDropdown(int resolutionIndex)
     {
-        CurrentSettings._resolutionIND = res;
-        Debug.Log(Screen.currentResolution);
+        CurrentSettings._resolutionIND = resolutionIndex;
+        _selectedResolution = _avalibleResolutions[resolutionIndex];
+        ApplyAllSetting();
+        OnSettingsChanged.Invoke();
+        SaveCurrentSettings();
+    }
+
+
+    public void SetRefreshRateFromDropdown(int refreshRateIndex)
+    {
+        CurrentSettings._refreshRateIND = refreshRateIndex;
+        _selectedRefreshRate = _avalibleRefreshRates[refreshRateIndex];
         ApplyAllSetting();
         OnSettingsChanged.Invoke();
         SaveCurrentSettings();
@@ -138,28 +197,103 @@ public class Settings : PersistentSingleton<Settings>
     public void PopulateResolutionsDropdown()
     {
         _resDropdown.ClearOptions();
-
-        _avalibleRes = Screen.resolutions.ToList();
-
-        _resOptions = new List<string>();
+        _refreshRateOptions.Clear();
 
         int currentResolutionIndex = 0;
-        
-        for (int i = 0; i < _avalibleRes.Count; i++)
+
+        for (int i = 0; i < _avalibleResolutions.Count; i++)
         {
-            Resolution res = _avalibleRes[i];
-            string option = $"{res.width}x{res.height} ({(res.refreshRateRatio.numerator / (double)res.refreshRateRatio.denominator).ToString("F0")}Hz)";
+            Vector2Int resolution = _avalibleResolutions[i];
+            string option = $"{resolution.x}x{resolution.y}";
             _resOptions.Add(option);
         }
-        
+
         _resDropdown.AddOptions(_resOptions);
         _resDropdown.value = currentResolutionIndex;
-        _resDropdown.RefreshShownValue();      
+        _resDropdown.RefreshShownValue();
 
     }
 
 
-    public void SetResolutionInDropdownToSaved()
+    public void PopulateRefreshRatesDropdown()
+    {
+        _refreshRateDropdown.ClearOptions();
+        _refreshRateOptions.Clear();
+
+        int currentRefreshRateIndex = 0;
+
+        for (int i = 0; i < _avalibleRefreshRates.Count; i++)
+        {
+            uint refreshRate = _avalibleRefreshRates[i].numerator / _avalibleRefreshRates[i].denominator;
+            string option = $"{refreshRate}HZ";
+            _refreshRateOptions.Add(option);
+        }
+
+        _refreshRateDropdown.AddOptions(_refreshRateOptions);
+        _refreshRateDropdown.value = currentRefreshRateIndex;
+        _refreshRateDropdown.RefreshShownValue();
+    }
+
+
+    private void InitResolutionsAndRefreshRates()
+    {
+        _avalibleRefreshRates.Clear();
+        _avalibleResolutions.Clear();
+
+        foreach (var resolutions in Screen.resolutions)
+        {
+            if (!_avalibleRefreshRates.Contains(resolutions.refreshRateRatio))
+            {
+                _avalibleRefreshRates.Add(resolutions.refreshRateRatio);
+            }
+
+            var candidateResolution = new Vector2Int(resolutions.width, resolutions.height);
+
+            if (!_avalibleResolutions.Contains(candidateResolution))
+            {
+                _avalibleResolutions.Add(candidateResolution);
+            }
+        }
+
+
+    }
+
+
+    private void ApplyResolutionSettings()
+    {
+        if (_currentResolution != _selectedResolution)
+        {
+            if (IsRefreshRatesMatch())
+            {
+                Screen.SetResolution(_selectedResolution.x, _selectedResolution.y, _selectedFullSceenMode, _selectedRefreshRate);
+            }
+
+            else
+            {
+                Screen.SetResolution(_selectedResolution.x, _selectedResolution.y, _selectedFullSceenMode);
+            }
+
+            _currentResolution = _selectedResolution;
+            _currentRefreshRate = _selectedRefreshRate;
+
+            Debug.Log(_currentResolution);
+            Debug.Log(_currentRefreshRate);
+        }
+    }
+
+
+    public bool IsRefreshRatesMatch()
+    {
+        if (_currentRefreshRate.numerator != _selectedRefreshRate.numerator || _currentRefreshRate.denominator != _selectedRefreshRate.denominator)
+        {
+            return false;
+        }
+
+        else return true;
+    }
+
+
+    private void SetResolutionDropdownValueToSaved()
     {
         int savedInd = CurrentSettings._resolutionIND;
 
@@ -167,18 +301,14 @@ public class Settings : PersistentSingleton<Settings>
         {
             _resDropdown.value = savedInd;
         }
-
         else
         {
             int actualCurrentInd = 0;
 
-            for (int i = 0; i < _avalibleRes.Count; i++)
+            for (int i = 0; i < _avalibleResolutions.Count; i++)
             {
-                Resolution res = _avalibleRes[i];
-
-                if (res.width == Screen.currentResolution.width &&
-                    res.height == Screen.currentResolution.height &&
-                    res.refreshRateRatio.Equals(Screen.currentResolution.refreshRateRatio))
+                Vector2Int res = _avalibleResolutions[i];
+                if (res.x == Screen.currentResolution.width && res.y == Screen.currentResolution.height)
                 {
                     actualCurrentInd = i;
                     break;
@@ -186,7 +316,34 @@ public class Settings : PersistentSingleton<Settings>
             }
 
             _resDropdown.value = actualCurrentInd;
-            SetResolution(actualCurrentInd);
+        }
+    }
+
+
+    private void SetRefreshRateDropdownValueToSaved()
+    {
+        int savedInd = CurrentSettings._refreshRateIND;
+
+        if (savedInd >= 0 && savedInd < _refreshRateOptions.Count)
+        {
+            _refreshRateDropdown.value = savedInd;
+        }
+        else
+        {
+            int actualCurrentInd = 0;
+            for (int i = 0; i < _avalibleRefreshRates.Count; i++)
+            {
+                RefreshRate refreshRate = _avalibleRefreshRates[i];
+
+                if (refreshRate.numerator == Screen.currentResolution.refreshRateRatio.numerator &&
+                    refreshRate.denominator == Screen.currentResolution.refreshRateRatio.denominator)
+                {
+                    actualCurrentInd = i;
+                    break;
+                }
+            }
+
+            _refreshRateDropdown.value = actualCurrentInd;
         }
     }
 
